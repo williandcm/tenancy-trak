@@ -1,16 +1,41 @@
 import { useState, useMemo, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Landmark, Building2, DollarSign, Banknote, CheckCircle2,
-  Percent, AlertTriangle, Calculator, FileCheck,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Landmark,
+  Building2,
+  DollarSign,
+  Banknote,
+  AlertTriangle,
+  Calculator,
+  FileCheck,
+  Recycle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -30,9 +55,11 @@ interface IptuUnitShare {
   unitId: string;
   unitName: string;
   areaSqm: number;
+  fracaoIdeal: number;
   iptuShare: number;
   trashFeeShare: number;
   installmentTotal: number;
+  numInstallments: number;
   monthlyAmount: number;
   lumpSumTotal: number;
   paymentMode: PaymentMode;
@@ -44,16 +71,23 @@ interface IptuUnitShare {
 interface IptuRecord {
   id: string;
   year: number;
-  iptuAmount: number;
-  trashFee: number;
-  baseAreaSqm: number;
-  totalInstallment: number;
-  totalLumpSum: number;
-  tenantDiscountPercent: number;
-  numInstallments: number;
+  totalAvista: number;
+  totalAprazo: number;
+  lixoAvista: number;
+  lixoAprazo: number;
+  descontoAvista: number;
+  firstDueDate: string;
   notes: string;
   shares: IptuUnitShare[];
   createdAt: string;
+  /* legacy */
+  numInstallments?: number;
+  iptuAmount?: number;
+  trashFee?: number;
+  baseAreaSqm?: number;
+  totalInstallment?: number;
+  totalLumpSum?: number;
+  tenantDiscountPercent?: number;
 }
 
 /* ── localStorage helpers ─────────────────────────────── */
@@ -63,17 +97,48 @@ const BILLS_KEY = "locagest-utility-bills";
 const loadIptuRecords = (): IptuRecord[] => {
   try {
     const raw = JSON.parse(localStorage.getItem(IPTU_KEY) || "[]");
-    return raw.map((r: any) => ({
-      ...r,
-      shares: (r.shares || []).map((sh: any) => ({
-        ...sh,
-        paymentMode: sh.paymentMode ?? "installment",
-        installments: sh.installments ?? [],
-        lumpSumPaid: sh.lumpSumPaid ?? false,
-        lumpSumPaidDate: sh.lumpSumPaidDate ?? null,
-      })),
-    }));
-  } catch { return []; }
+    return raw.map((r: any) => {
+      const totalAprazo =
+        r.totalAprazo ??
+        r.totalInstallment ??
+        (((r.iptuAmount ?? 0) + (r.trashFee ?? 0)) || 0);
+      const totalAvista = r.totalAvista ?? r.totalLumpSum ?? totalAprazo;
+      const lixoAprazo = r.lixoAprazo ?? r.trashFee ?? 0;
+      const lixoAvista = lixoAprazo; // Lixo não tem desconto à vista
+
+      // Desconto à vista baseado apenas no IPTU (sem lixo)
+      const iptuSemLixoAprazo = totalAprazo - lixoAprazo;
+      const iptuSemLixoAvista = totalAvista - lixoAvista;
+      const descontoAvista = r.descontoAvista ??
+        (iptuSemLixoAprazo > 0 && iptuSemLixoAvista < iptuSemLixoAprazo
+          ? Math.round((1 - iptuSemLixoAvista / iptuSemLixoAprazo) * 10000) / 100
+          : 0);
+
+      return {
+        ...r,
+        totalAprazo,
+        totalAvista,
+        lixoAprazo,
+        lixoAvista,
+        descontoAvista,
+        firstDueDate: r.firstDueDate ?? r.shares?.[0]?.installments?.[0]?.dueDate ?? "",
+        shares: (r.shares || []).map((sh: any) => {
+          const legacyNumInst = sh.numInstallments ?? r.numInstallments ?? 10;
+          return {
+            ...sh,
+            fracaoIdeal: sh.fracaoIdeal ?? 0,
+            numInstallments: legacyNumInst,
+            paymentMode: sh.paymentMode ?? "installment",
+            installments: sh.installments ?? [],
+            lumpSumPaid: sh.lumpSumPaid ?? false,
+            lumpSumPaidDate: sh.lumpSumPaidDate ?? null,
+          };
+        }),
+      };
+    });
+  } catch {
+    return [];
+  }
 };
 
 const saveIptuRecords = (records: IptuRecord[]) => {
@@ -81,8 +146,11 @@ const saveIptuRecords = (records: IptuRecord[]) => {
 };
 
 const loadUtilityBills = (): any[] => {
-  try { return JSON.parse(localStorage.getItem(BILLS_KEY) || "[]"); }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(BILLS_KEY) || "[]");
+  } catch {
+    return [];
+  }
 };
 
 const saveUtilityBills = (bills: any[]) => {
@@ -92,18 +160,36 @@ const saveUtilityBills = (bills: any[]) => {
 const R$ = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-/** Regenerate utility bills from IPTU record (must match logic in IPTU.tsx) */
+const fmtPct = (v: number) =>
+  `${(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}%`;
+
+/** Regenerate utility bills from IPTU record */
 const regenerateBills = (record: IptuRecord) => {
   const bills = loadUtilityBills();
   const filtered = bills.filter((b: any) => b.iptuRecordId !== record.id);
 
-  const numInstallments = record.numInstallments;
-  const installmentShares = record.shares.filter((sh) => sh.paymentMode === "installment");
-  const lumpSumShares = record.shares.filter((sh) => sh.paymentMode === "lump_sum");
+  const installmentShares = record.shares.filter(
+    (sh) => sh.paymentMode === "installment"
+  );
+  const lumpSumShares = record.shares.filter(
+    (sh) => sh.paymentMode === "lump_sum"
+  );
+
+  // Determinar o máximo de parcelas entre todas as unidades parceladas
+  const maxInstallments = installmentShares.reduce(
+    (max, sh) => Math.max(max, sh.numInstallments),
+    0
+  );
 
   // Parcelado bills
-  for (let i = 0; i < numInstallments; i++) {
-    const shares = installmentShares.map((sh) => {
+  for (let i = 0; i < maxInstallments; i++) {
+    // Apenas unidades que possuem essa parcela
+    const sharesForThisInst = installmentShares.filter(
+      (sh) => i < sh.numInstallments
+    );
+    if (sharesForThisInst.length === 0) continue;
+
+    const shares = sharesForThisInst.map((sh) => {
       const inst = sh.installments[i];
       return {
         unitId: sh.unitId,
@@ -114,11 +200,11 @@ const regenerateBills = (record: IptuRecord) => {
       };
     });
 
-    if (shares.length === 0) continue;
-
     const totalAmount = shares.reduce((sum, s) => sum + s.amount, 0);
-    const dueDate = record.shares[0]?.installments[i]?.dueDate || "";
-    const [dueYear, dueMonth] = dueDate ? dueDate.split("-") : [String(record.year), "01"];
+    const dueDate = sharesForThisInst[0]?.installments[i]?.dueDate || "";
+    const [dueYear, dueMonth] = dueDate
+      ? dueDate.split("-")
+      : [String(record.year), "01"];
 
     filtered.push({
       id: crypto.randomUUID(),
@@ -128,7 +214,7 @@ const regenerateBills = (record: IptuRecord) => {
       totalAmount: Math.round(totalAmount * 100) / 100,
       dueDate,
       billDate: format(new Date(), "yyyy-MM-dd"),
-      notes: `IPTU ${record.year} — Parcela ${i + 1}/${numInstallments}`,
+      notes: `IPTU ${record.year} — Parcela ${i + 1}`,
       shares,
       createdAt: new Date().toISOString(),
       iptuRecordId: record.id,
@@ -138,8 +224,10 @@ const regenerateBills = (record: IptuRecord) => {
 
   // À Vista bill
   if (lumpSumShares.length > 0) {
-    const firstDueDate = record.shares[0]?.installments[0]?.dueDate || "";
-    const [dueYear, dueMonth] = firstDueDate ? firstDueDate.split("-") : [String(record.year), "01"];
+    const firstDueDate = record.firstDueDate || record.shares[0]?.installments[0]?.dueDate || "";
+    const [dueYear, dueMonth] = firstDueDate
+      ? firstDueDate.split("-")
+      : [String(record.year), "01"];
 
     const shares = lumpSumShares.map((sh) => ({
       unitId: sh.unitId,
@@ -177,23 +265,24 @@ interface Props {
   onBillsGenerated: () => void;
 }
 
-const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
+const IptuBillingDialog = ({
+  open,
+  onOpenChange,
+  onBillsGenerated,
+}: Props) => {
   const currentYear = new Date().getFullYear();
   const [records, setRecords] = useState<IptuRecord[]>([]);
   const [selectedRecordId, setSelectedRecordId] = useState<string>("");
   const [modes, setModes] = useState<Record<string, PaymentMode>>({});
 
-  // Load records whenever the dialog opens
   useEffect(() => {
     if (open) {
       const loaded = loadIptuRecords();
       setRecords(loaded);
 
-      // Auto-select current year record if available
       const currentYearRecord = loaded.find((r) => r.year === currentYear);
       if (currentYearRecord) {
         setSelectedRecordId(currentYearRecord.id);
-        // Initialize modes from existing record
         const m: Record<string, PaymentMode> = {};
         currentYearRecord.shares.forEach((sh) => {
           m[sh.unitId] = sh.paymentMode;
@@ -240,21 +329,52 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
     setModes(m);
   };
 
-  // Computed totals based on current mode selections
   const summary = useMemo(() => {
-    if (!selectedRecord) return { totalCobranca: 0, totalEconomia: 0, lumpCount: 0, installmentCount: 0, shares: [] };
+    if (!selectedRecord)
+      return {
+        totalCobranca: 0,
+        totalEconomia: 0,
+        lumpCount: 0,
+        installmentCount: 0,
+        shares: [],
+      };
+
+    const iptuSemLixoAprazo = selectedRecord.totalAprazo - selectedRecord.lixoAprazo;
+    const iptuSemLixoAvista = selectedRecord.totalAvista - selectedRecord.lixoAvista;
 
     const shares = selectedRecord.shares.map((sh) => {
       const mode = modes[sh.unitId] || "installment";
-      const valorCobrado = mode === "lump_sum" ? sh.lumpSumTotal : sh.installmentTotal;
-      const economia = mode === "lump_sum" ? sh.installmentTotal - sh.lumpSumTotal : 0;
-      return { ...sh, selectedMode: mode, valorCobrado, economia };
+      const valorCobrado =
+        mode === "lump_sum" ? sh.lumpSumTotal : sh.installmentTotal;
+      const economia =
+        mode === "lump_sum"
+          ? sh.installmentTotal - sh.lumpSumTotal
+          : 0;
+      const iptuShare =
+        mode === "lump_sum"
+          ? Math.round(sh.fracaoIdeal * iptuSemLixoAvista * 100) / 100
+          : Math.round(sh.fracaoIdeal * iptuSemLixoAprazo * 100) / 100;
+      // Taxa de lixo não tem desconto — sempre igual
+      const trashFeeShare =
+        Math.round(sh.fracaoIdeal * selectedRecord.lixoAprazo * 100) / 100;
+      return {
+        ...sh,
+        selectedMode: mode,
+        valorCobrado,
+        economia,
+        iptuShare,
+        trashFeeShare,
+      };
     });
 
     const totalCobranca = shares.reduce((sum, s) => sum + s.valorCobrado, 0);
     const totalEconomia = shares.reduce((sum, s) => sum + s.economia, 0);
-    const lumpCount = shares.filter((s) => s.selectedMode === "lump_sum").length;
-    const installmentCount = shares.filter((s) => s.selectedMode === "installment").length;
+    const lumpCount = shares.filter(
+      (s) => s.selectedMode === "lump_sum"
+    ).length;
+    const installmentCount = shares.filter(
+      (s) => s.selectedMode === "installment"
+    ).length;
 
     return { totalCobranca, totalEconomia, lumpCount, installmentCount, shares };
   }, [selectedRecord, modes]);
@@ -262,23 +382,37 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
   const handleLancarCobranca = () => {
     if (!selectedRecord) return;
 
-    // Update the IPTU record with new payment modes
+    const iptuSemLixoAprazo = selectedRecord.totalAprazo - selectedRecord.lixoAprazo;
+    const iptuSemLixoAvista = selectedRecord.totalAvista - selectedRecord.lixoAvista;
+
     const updatedRecords = records.map((r) => {
       if (r.id !== selectedRecord.id) return r;
       return {
         ...r,
-        shares: r.shares.map((sh) => ({
-          ...sh,
-          paymentMode: modes[sh.unitId] || sh.paymentMode,
-        })),
+        shares: r.shares.map((sh) => {
+          const mode = modes[sh.unitId] || sh.paymentMode;
+          const newIptuShare =
+            mode === "lump_sum"
+              ? Math.round(sh.fracaoIdeal * iptuSemLixoAvista * 100) / 100
+              : Math.round(sh.fracaoIdeal * iptuSemLixoAprazo * 100) / 100;
+          // Taxa de lixo não tem desconto — sempre igual
+          const newTrashShare =
+            Math.round(sh.fracaoIdeal * r.lixoAprazo * 100) / 100;
+          return {
+            ...sh,
+            paymentMode: mode,
+            iptuShare: newIptuShare,
+            trashFeeShare: newTrashShare,
+          };
+        }),
       };
     });
 
-    // Save to localStorage
     saveIptuRecords(updatedRecords);
 
-    // Regenerate utility bills
-    const updatedRecord = updatedRecords.find((r) => r.id === selectedRecord.id);
+    const updatedRecord = updatedRecords.find(
+      (r) => r.id === selectedRecord.id
+    );
     if (updatedRecord) {
       regenerateBills(updatedRecord);
     }
@@ -290,11 +424,6 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
     onBillsGenerated();
     onOpenChange(false);
   };
-
-  const years = useMemo(() => {
-    const s = new Set(records.map((r) => r.year));
-    return Array.from(s).sort((a, b) => b - a);
-  }, [records]);
 
   const hasChanges = useMemo(() => {
     if (!selectedRecord) return false;
@@ -313,7 +442,7 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
           </DialogTitle>
           <DialogDescription>
             Os valores são preenchidos automaticamente com base no lançamento do
-            IPTU. Selecione a modalidade (à vista ou parcelado) para cada
+            IPTU. Selecione a modalidade (à vista ou a prazo) para cada
             unidade.
           </DialogDescription>
         </DialogHeader>
@@ -347,7 +476,7 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                 <SelectContent>
                   {records.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      IPTU {r.year} — {R$(r.totalInstallment)}
+                      IPTU {r.year} — {R$(r.totalAprazo)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -361,23 +490,27 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                   <CardContent className="p-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <p className="text-xs text-muted-foreground">IPTU</p>
-                        <p className="font-bold">{R$(selectedRecord.iptuAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Tx Lixo</p>
-                        <p className="font-bold">{R$(selectedRecord.trashFee)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Parcelado ({selectedRecord.numInstallments}x)</p>
-                        <p className="font-bold">{R$(selectedRecord.totalInstallment)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Total À Vista
+                        </p>
+                        <p className="font-bold text-green-700 dark:text-green-400">
+                          {R$(selectedRecord.totalAvista)}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          Total À Vista (desc. {selectedRecord.tenantDiscountPercent}%)
+                          Total A Prazo
                         </p>
-                        <p className="font-bold text-green-700 dark:text-green-400">
-                          {R$(selectedRecord.totalLumpSum)}
+                        <p className="font-bold">
+                          {R$(selectedRecord.totalAprazo)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Recycle className="h-3 w-3" /> Taxa de Lixo (sem desconto)
+                        </p>
+                        <p className="font-bold">
+                          {R$(selectedRecord.lixoAprazo)}
                         </p>
                       </div>
                     </div>
@@ -415,13 +548,25 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                         <TableRow>
                           <TableHead>Unidade</TableHead>
                           <TableHead className="text-right">Área</TableHead>
-                          <TableHead className="text-right">IPTU (m²)</TableHead>
-                          <TableHead className="text-right">Tx Lixo</TableHead>
-                          <TableHead className="text-right">Parcelado</TableHead>
-                          <TableHead className="text-right">À Vista</TableHead>
-                          <TableHead className="text-center">Modalidade</TableHead>
-                          <TableHead className="text-right">Valor Cobrado</TableHead>
-                          <TableHead className="text-right">Economia</TableHead>
+                          <TableHead className="text-right">
+                            Fração Ideal
+                          </TableHead>
+                          <TableHead className="text-right">IPTU</TableHead>
+                          <TableHead className="text-right">
+                            Tx Lixo
+                          </TableHead>
+                          <TableHead className="text-right">
+                            A Prazo
+                          </TableHead>
+                          <TableHead className="text-right">
+                            À Vista
+                          </TableHead>
+                          <TableHead className="text-center">
+                            Modalidade
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Valor Cobrado
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -438,6 +583,9 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                               <TableCell className="text-right text-muted-foreground">
                                 {sh.areaSqm.toLocaleString("pt-BR")} m²
                               </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {fmtPct(sh.fracaoIdeal)}
+                              </TableCell>
                               <TableCell className="text-right">
                                 {R$(sh.iptuShare)}
                               </TableCell>
@@ -445,30 +593,49 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                                 {R$(sh.trashFeeShare)}
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className={!isLump ? "font-bold" : "text-muted-foreground"}>
+                                <span
+                                  className={
+                                    !isLump
+                                      ? "font-bold"
+                                      : "text-muted-foreground"
+                                  }
+                                >
                                   {R$(sh.installmentTotal)}
                                 </span>
                                 {!isLump && (
                                   <p className="text-[10px] text-muted-foreground">
-                                    {selectedRecord.numInstallments}x de {R$(sh.monthlyAmount)}
+                                    {sh.numInstallments}x de{" "}
+                                    {R$(sh.monthlyAmount)}
                                   </p>
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className={isLump ? "font-bold text-green-700 dark:text-green-400" : "text-muted-foreground"}>
+                                <span
+                                  className={
+                                    isLump
+                                      ? "font-bold text-green-700 dark:text-green-400"
+                                      : "text-muted-foreground"
+                                  }
+                                >
                                   {R$(sh.lumpSumTotal)}
                                 </span>
                               </TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-2">
-                                  <span className={`text-xs ${!isLump ? "font-semibold" : "text-muted-foreground"}`}>
+                                  <span
+                                    className={`text-xs ${!isLump ? "font-semibold" : "text-muted-foreground"}`}
+                                  >
                                     Parc.
                                   </span>
                                   <Switch
                                     checked={isLump}
-                                    onCheckedChange={() => toggleMode(sh.unitId)}
+                                    onCheckedChange={() =>
+                                      toggleMode(sh.unitId)
+                                    }
                                   />
-                                  <span className={`text-xs ${isLump ? "font-semibold text-green-700 dark:text-green-400" : "text-muted-foreground"}`}>
+                                  <span
+                                    className={`text-xs ${isLump ? "font-semibold text-green-700 dark:text-green-400" : "text-muted-foreground"}`}
+                                  >
                                     À Vista
                                   </span>
                                 </div>
@@ -477,16 +644,6 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                                 <span className="font-bold text-base">
                                   {R$(sh.valorCobrado)}
                                 </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {sh.economia > 0 ? (
-                                  <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-                                    <Percent className="mr-1 h-3 w-3" />
-                                    {R$(sh.economia)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">—</span>
-                                )}
                               </TableCell>
                             </TableRow>
                           );
@@ -514,8 +671,10 @@ const IptuBillingDialog = ({ open, onOpenChange, onBillsGenerated }: Props) => {
                           </span>
                         </div>
                         {summary.totalEconomia > 0 && (
-                          <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-                            <Percent className="mr-1 h-3 w-3" />
+                          <Badge
+                            variant="outline"
+                            className="border-green-500 text-green-700 dark:text-green-400"
+                          >
                             Economia total: {R$(summary.totalEconomia)}
                           </Badge>
                         )}

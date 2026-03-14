@@ -143,6 +143,25 @@ const Utilities = () => {
     },
   });
 
+  // Buscar contratos ativos para saber quais salas estão ocupadas
+  const { data: activeContracts } = useQuery({
+    queryKey: ["active-contracts-for-utilities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("unit_id")
+        .eq("status", "active");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const occupiedUnitIds = useMemo(() => {
+    if (!activeContracts) return new Set<string>();
+    return new Set(activeContracts.map((c) => c.unit_id));
+  }, [activeContracts]);
+
+  /** Retorna TODAS as salas vinculadas a uma ligação */
   const getShareUnits = (connId: string, type: "electricity" | "water" | "iptu") => {
     if (!units) return [];
     return units.filter((u) =>
@@ -150,6 +169,11 @@ const Utilities = () => {
         ? u.electricity_connection === connId
         : u.water_connection === connId
     );
+  };
+
+  /** Retorna apenas as salas OCUPADAS (com contrato ativo) vinculadas a uma ligação */
+  const getOccupiedShareUnits = (connId: string, type: "electricity" | "water" | "iptu") => {
+    return getShareUnits(connId, type).filter((u) => occupiedUnitIds.has(u.id));
   };
 
   /* ── Attachment helpers ───────────────────────────── */
@@ -266,9 +290,14 @@ const Utilities = () => {
       toast.error("Apenas administradores podem editar contas.");
       return;
     }
-    const shareUnits = getShareUnits(billForm.connectionId, billForm.billType);
-    if (shareUnits.length === 0) {
+    const allShareUnits = getShareUnits(billForm.connectionId, billForm.billType);
+    const shareUnits = getOccupiedShareUnits(billForm.connectionId, billForm.billType);
+    if (allShareUnits.length === 0) {
       toast.error("Nenhuma sala encontrada para essa ligação/tipo.");
+      return;
+    }
+    if (shareUnits.length === 0) {
+      toast.error("Nenhuma sala ocupada encontrada para essa ligação. Somente salas com contrato ativo entram no rateio.");
       return;
     }
     const totalAmount = parseBRNumber(billForm.totalAmount);
@@ -1106,7 +1135,7 @@ const Utilities = () => {
           <DialogHeader>
             <DialogTitle>{editBillId ? "Editar Conta" : "Lançar Conta"}</DialogTitle>
             <DialogDescription>
-              O valor será rateado automaticamente entre as salas da ligação.
+              O valor será rateado automaticamente entre as salas ocupadas (com contrato ativo) da ligação.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1180,14 +1209,24 @@ const Utilities = () => {
               (() => {
                 const total = parseBRNumber(billForm.totalAmount);
                 if (isNaN(total) || total <= 0) return null;
-                const shareUnits = getShareUnits(billForm.connectionId, billForm.billType);
-                if (shareUnits.length === 0)
+                const allShareUnits = getShareUnits(billForm.connectionId, billForm.billType);
+                const shareUnits = getOccupiedShareUnits(billForm.connectionId, billForm.billType);
+                const vacantUnits = allShareUnits.filter((u) => !occupiedUnitIds.has(u.id));
+                if (allShareUnits.length === 0)
                   return <p className="text-xs text-muted-foreground">Nenhuma sala encontrada.</p>;
+                if (shareUnits.length === 0)
+                  return (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                        Nenhuma sala ocupada nesta ligação. Somente salas com contrato ativo entram no rateio.
+                      </p>
+                    </div>
+                  );
                 const perUnit = total / shareUnits.length;
                 return (
                   <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
                     <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" /> Prévia do Rateio
+                      <Users className="h-3.5 w-3.5" /> Prévia do Rateio (somente salas ocupadas)
                     </p>
                     {shareUnits.length > 1 && (
                       <p className="text-xs text-muted-foreground">
@@ -1202,6 +1241,12 @@ const Utilities = () => {
                         </Badge>
                       ))}
                     </div>
+                    {vacantUnits.length > 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                        ⚠ Sala(s) vaga(s) excluída(s) do rateio:{" "}
+                        {vacantUnits.map((u) => u.name).join(", ")}
+                      </p>
+                    )}
                   </div>
                 );
               })()}
