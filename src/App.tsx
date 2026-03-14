@@ -13,6 +13,12 @@ import Contracts from "./pages/Contracts";
 import Payments from "./pages/Payments";
 import Utilities from "./pages/Utilities";
 import Notifications from "./pages/Notifications";
+import Users from "./pages/Users";
+import Landlords from "./pages/Landlords";
+import Help from "./pages/Help";
+import ContractTemplate from "./pages/ContractTemplate";
+import IPTU from "./pages/IPTU";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +53,12 @@ const App = () => (
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             <Route path="/utilities" element={<ProtectedRoute><Utilities /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+            <Route path="/landlords" element={<ProtectedRoute><Landlords /></ProtectedRoute>} />
+            <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
+            <Route path="/contract-template" element={<ProtectedRoute><ContractTemplate /></ProtectedRoute>} />
+            <Route path="/iptu" element={<ProtectedRoute><IPTU /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

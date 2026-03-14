@@ -3,25 +3,54 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   Building2, LayoutDashboard, DoorOpen, Users, FileText,
   CreditCard, Zap, Bell, LogOut, ChevronLeft, ChevronRight,
+  Shield, UserCheck, BookOpen, FileEdit, Landmark, BarChart3,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/units", icon: DoorOpen, label: "Unidades" },
   { to: "/tenants", icon: Users, label: "Inquilinos" },
+  { to: "/landlords", icon: UserCheck, label: "Locadores" },
   { to: "/contracts", icon: FileText, label: "Contratos" },
   { to: "/payments", icon: CreditCard, label: "Pagamentos" },
+  { to: "/iptu", icon: Landmark, label: "IPTU" },
   { to: "/utilities", icon: Zap, label: "Consumos" },
+  { to: "/reports", icon: BarChart3, label: "Relatórios" },
   { to: "/notifications", icon: Bell, label: "Alertas" },
+  { to: "/users", icon: Shield, label: "Usuários" },
+  { to: "/contract-template", icon: FileEdit, label: "Modelo Contrato", adminOnly: true },
+  { to: "/help", icon: BookOpen, label: "Ajuda" },
 ];
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { signOut } = useAuth();
+  const { signOut, hasPermission, profile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+
+  const visibleNavItems = navItems.filter(
+    (item) => !(item as any).adminOnly || hasPermission("admin")
+  );
+
+  const roleLabels: Record<string, string> = {
+    admin: "Administrador",
+    manager: "Gerente",
+    operator: "Operador",
+    viewer: "Visualizador",
+  };
+
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0].toUpperCase())
+        .join("")
+    : "?";
 
   return (
     <div className="flex min-h-screen">
@@ -47,8 +76,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 p-3">
-          {navItems.map((item) => {
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
+          {visibleNavItems.map((item) => {
             const active = location.pathname === item.to;
             return (
               <Link
@@ -68,8 +97,41 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-sidebar-border p-3 space-y-1">
+        {/* Footer - User Info + Logout */}
+        <div className="border-t border-sidebar-border p-3 space-y-2">
+          {/* User info */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2",
+                  collapsed ? "justify-center" : ""
+                )}>
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground text-xs font-bold">
+                    {initials}
+                  </div>
+                  {!collapsed && profile && (
+                    <div className="min-w-0 animate-fade-in">
+                      <p className="text-sm font-medium leading-tight truncate text-sidebar-foreground">
+                        {profile.full_name}
+                      </p>
+                      <p className="text-[10px] opacity-70 truncate">
+                        {roleLabels[profile.role] || profile.role}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </TooltipTrigger>
+              {collapsed && profile && (
+                <TooltipContent side="right" className="text-xs">
+                  <p className="font-semibold">{profile.full_name}</p>
+                  <p className="text-muted-foreground">{roleLabels[profile.role] || profile.role}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Logout */}
           <button
             onClick={signOut}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"

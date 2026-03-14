@@ -129,7 +129,7 @@ CREATE TABLE public.contracts (
   late_fee_max_percent NUMERIC(5,2) DEFAULT 20.00,
   adjustment_index TEXT DEFAULT 'IGPM',
   rescission_penalty_months INTEGER DEFAULT 3,
-  cleaning_fee NUMERIC(10,2) DEFAULT 500.00,
+  cleaning_fee NUMERIC(10,2) DEFAULT NULL,
   status contract_status NOT NULL DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

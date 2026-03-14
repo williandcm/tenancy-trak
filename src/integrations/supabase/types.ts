@@ -115,6 +115,9 @@ export type Database = {
       landlords: {
         Row: {
           address: string
+          address_number: string | null
+          neighborhood: string | null
+          complement: string | null
           cep: string | null
           city: string | null
           cpf: string
@@ -131,6 +134,9 @@ export type Database = {
         }
         Insert: {
           address: string
+          address_number?: string | null
+          neighborhood?: string | null
+          complement?: string | null
           cep?: string | null
           city?: string | null
           cpf: string
@@ -147,6 +153,9 @@ export type Database = {
         }
         Update: {
           address?: string
+          address_number?: string | null
+          neighborhood?: string | null
+          complement?: string | null
           cep?: string | null
           city?: string | null
           cpf?: string
@@ -249,7 +258,9 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_active: boolean
           phone: string | null
+          role: string
           updated_at: string
           user_id: string
         }
@@ -258,7 +269,9 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
           phone?: string | null
+          role?: string
           updated_at?: string
           user_id: string
         }
@@ -267,7 +280,9 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
           phone?: string | null
+          role?: string
           updated_at?: string
           user_id?: string
         }
@@ -320,6 +335,9 @@ export type Database = {
       tenants: {
         Row: {
           address: string | null
+          address_number: string | null
+          neighborhood: string | null
+          complement: string | null
           cep: string | null
           city: string | null
           cpf: string | null
@@ -327,6 +345,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          marital_status: string | null
           nationality: string | null
           notes: string | null
           phone: string | null
@@ -337,6 +356,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_number?: string | null
+          neighborhood?: string | null
+          complement?: string | null
           cep?: string | null
           city?: string | null
           cpf?: string | null
@@ -344,6 +366,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          marital_status?: string | null
           nationality?: string | null
           notes?: string | null
           phone?: string | null
@@ -354,6 +377,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_number?: string | null
+          neighborhood?: string | null
+          complement?: string | null
           cep?: string | null
           city?: string | null
           cpf?: string | null
@@ -361,6 +387,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          marital_status?: string | null
           nationality?: string | null
           notes?: string | null
           phone?: string | null
@@ -457,7 +484,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      contract_status: "active" | "expired" | "terminated" | "pending"
+      contract_status: "active" | "expired" | "terminated" | "pending" | "awaiting_approval"
       document_status: "pending" | "approved" | "rejected"
       unit_status: "available" | "occupied" | "maintenance"
     }
@@ -587,7 +614,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      contract_status: ["active", "expired", "terminated", "pending"],
+      contract_status: ["active", "expired", "terminated", "pending", "awaiting_approval"],
       document_status: ["pending", "approved", "rejected"],
       unit_status: ["available", "occupied", "maintenance"],
     },

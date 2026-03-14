@@ -1,0 +1,433 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Zap, Droplets, Plus, Pencil, Trash2, TrendingUp,
+  BarChart3, Users,
+} from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, LineChart, Line,
+} from "recharts";
+import { Separator } from "@/components/ui/separator";
+
+const CONNECTIONS = [
+  { id: "422A", label: "422A (4 Salas)", description: "Salas 1-4 (Andar Superior)" },
+  { id: "422", label: "422 (Salão)", description: "Salão comercial (Térreo)" },
+  { id: "422B", label: "422B (Fundo)", description: "Sala Fundo (Térreo)" },
+];
+
+const Utilities = () => {
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("422A");
+  const [form, setForm] = useState({
+    connection_type: "electricity" as string,
+    connection_identifier: "422A",
+    reading_date: format(new Date(), "yyyy-MM-dd"),
+    reading_value: "",
+    notes: "",
+  });
+
+  const { data: readings, isLoading } = useQuery({
+    queryKey: ["utility-readings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("utility_readings")
+        .select("*")
+        .order("reading_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch units that share each connection so we can show the split
+  const { data: units } = useQuery({
+    queryKey: ["units-connections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("units")
+        .select("id, name, electricity_connection, water_connection")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getShareUnits = (connId: string, type: "electricity" | "water") => {
+    if (!units) return [];
+    return units.filter((u) =>
+      type === "electricity"
+        ? u.electricity_connection === connId
+        : u.water_connection === connId
+    );
+  };
+
+  const saveReading = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        connection_type: form.connection_type,
+        connection_identifier: form.connection_identifier,
+        reading_date: form.reading_date,
+        reading_value: parseFloat(form.reading_value),
+        notes: form.notes || null,
+      };
+      if (editId) {
+        const { error } = await supabase.from("utility_readings").update(payload).eq("id", editId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("utility_readings").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["utility-readings"] });
+      setDialogOpen(false);
+      resetForm();
+      toast.success(editId ? "Leitura atualizada!" : "Leitura registrada!");
+    },
+    onError: (e: any) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const deleteReading = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("utility_readings").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["utility-readings"] });
+      toast.success("Leitura removida!");
+    },
+  });
+
+  const resetForm = () => {
+    setEditId(null);
+    setForm({
+      connection_type: "electricity",
+      connection_identifier: activeTab,
+      reading_date: format(new Date(), "yyyy-MM-dd"),
+      reading_value: "",
+      notes: "",
+    });
+  };
+
+  const handleNew = (type: string) => {
+    resetForm();
+    setForm((prev) => ({ ...prev, connection_type: type, connection_identifier: activeTab }));
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (r: any) => {
+    setEditId(r.id);
+    setForm({
+      connection_type: r.connection_type,
+      connection_identifier: r.connection_identifier,
+      reading_date: r.reading_date,
+      reading_value: String(r.reading_value),
+      notes: r.notes || "",
+    });
+    setDialogOpen(true);
+  };
+
+  const getConnectionReadings = (connId: string, type: string) => {
+    return readings?.filter((r) => r.connection_identifier === connId && r.connection_type === type)
+      .sort((a, b) => a.reading_date.localeCompare(b.reading_date)) ?? [];
+  };
+
+  const getConsumptionData = (connId: string, type: string) => {
+    const sorted = getConnectionReadings(connId, type);
+    return sorted.map((r, i) => {
+      const prev = i > 0 ? sorted[i - 1] : null;
+      const consumption = prev ? Number(r.reading_value) - Number(prev.reading_value) : 0;
+      return {
+        date: format(new Date(r.reading_date + "T12:00:00"), "MMM/yy", { locale: ptBR }),
+        leitura: Number(r.reading_value),
+        consumo: Math.max(0, consumption),
+      };
+    });
+  };
+
+  const getLastReading = (connId: string, type: string) => {
+    const sorted = getConnectionReadings(connId, type);
+    return sorted.length > 0 ? sorted[sorted.length - 1] : null;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Consumos</h1>
+          <p className="mt-1 text-muted-foreground">Acompanhe as leituras de energia e água das 3 ligações</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => handleNew("water")}>
+            <Droplets className="mr-2 h-4 w-4" /> Leitura Água
+          </Button>
+          <Button onClick={() => handleNew("electricity")}>
+            <Zap className="mr-2 h-4 w-4" /> Leitura Energia
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full grid grid-cols-3">
+          {CONNECTIONS.map((conn) => (
+            <TabsTrigger key={conn.id} value={conn.id}>{conn.label}</TabsTrigger>
+          ))}
+        </TabsList>
+
+        {CONNECTIONS.map((conn) => (
+          <TabsContent key={conn.id} value={conn.id} className="space-y-6">
+            {/* Last readings summary */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(["electricity", "water"] as const).map((type) => {
+                const lastReading = getLastReading(conn.id, type);
+                const icon = type === "electricity" ? Zap : Droplets;
+                const Icon = icon;
+                const color = type === "electricity" ? "text-yellow-600" : "text-blue-600";
+                const bgColor = type === "electricity" ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-blue-100 dark:bg-blue-900/30";
+                return (
+                  <Card key={type} className="glass-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`rounded-lg p-3 ${bgColor}`}>
+                          <Icon className={`h-6 w-6 ${color}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">
+                            {type === "electricity" ? "Energia" : "Água"} · Última Leitura
+                          </p>
+                          {lastReading ? (
+                            <>
+                              <p className="text-2xl font-bold">{Number(lastReading.reading_value).toLocaleString("pt-BR")}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(lastReading.reading_date + "T12:00:00"), "dd/MM/yyyy")}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Sem leituras</p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Rateio por Sala — only for shared connections */}
+            {(["electricity", "water"] as const).some(
+              (type) => getShareUnits(conn.id, type).length > 1
+            ) && (
+              <Card className="glass-card border-dashed border-2 border-primary/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Rateio por Sala — Ligação {conn.id}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Os valores totais de consumo são divididos igualmente entre as salas que compartilham esta ligação.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {(["electricity", "water"] as const).map((type) => {
+                      const shareUnits = getShareUnits(conn.id, type);
+                      if (shareUnits.length <= 1) return null;
+                      const sorted = getConnectionReadings(conn.id, type);
+                      let totalConsumption = 0;
+                      if (sorted.length >= 2) {
+                        const last = sorted[sorted.length - 1];
+                        const prev = sorted[sorted.length - 2];
+                        totalConsumption = Math.max(0, Number(last.reading_value) - Number(prev.reading_value));
+                      }
+                      const perUnit = totalConsumption / shareUnits.length;
+                      const Icon = type === "electricity" ? Zap : Droplets;
+                      const color = type === "electricity" ? "text-yellow-600" : "text-blue-600";
+                      const bgColor = type === "electricity" ? "bg-yellow-50 dark:bg-yellow-900/10" : "bg-blue-50 dark:bg-blue-900/10";
+                      const unit = type === "electricity" ? "kWh" : "m³";
+
+                      return (
+                        <div key={type} className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <Icon className={`h-4 w-4 ${color}`} />
+                            {type === "electricity" ? "Energia" : "Água"}
+                          </div>
+                          <div className={`rounded-lg p-3 ${bgColor} text-center`}>
+                            <p className="text-xs text-muted-foreground mb-1">Consumo Total</p>
+                            <p className="text-xl font-bold">{totalConsumption.toLocaleString("pt-BR")} <span className="text-xs font-normal text-muted-foreground">{unit}</span></p>
+                            <p className="text-xs text-muted-foreground mt-1">÷ {shareUnits.length} salas = <span className="font-semibold">{perUnit.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} {unit}/sala</span></p>
+                          </div>
+                          <div className="space-y-1.5">
+                            {shareUnits.map((u) => (
+                              <div key={u.id} className="flex items-center justify-between text-sm rounded-md border px-3 py-2">
+                                <span className="font-medium">{u.name}</span>
+                                <Badge variant="secondary">{perUnit.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} {unit}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Charts */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {(["electricity", "water"] as const).map((type) => {
+                const chartData = getConsumptionData(conn.id, type);
+                const color = type === "electricity" ? "hsl(42, 80%, 55%)" : "hsl(210, 80%, 52%)";
+                return (
+                  <Card key={type} className="glass-card">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Consumo {type === "electricity" ? "Energia" : "Água"} · {conn.label}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {chartData.length < 2 ? (
+                        <p className="text-center text-sm text-muted-foreground py-8">Registre pelo menos 2 leituras para ver o gráfico de consumo</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} />
+                            <Tooltip />
+                            <Bar dataKey="consumo" fill={color} radius={[4, 4, 0, 0]} name="Consumo" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Readings Tables */}
+            {(["electricity", "water"] as const).map((type) => {
+              const typeReadings = readings?.filter(
+                (r) => r.connection_identifier === conn.id && r.connection_type === type
+              ) ?? [];
+              return (
+                <Card key={type} className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      {type === "electricity" ? <Zap className="h-4 w-4 text-yellow-600" /> : <Droplets className="h-4 w-4 text-blue-600" />}
+                      Leituras de {type === "electricity" ? "Energia" : "Água"} · {conn.label}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Leitura</TableHead>
+                          <TableHead>Observações</TableHead>
+                          <TableHead className="w-24">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {typeReadings.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                              Nenhuma leitura registrada
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          typeReadings.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell>{format(new Date(r.reading_date + "T12:00:00"), "dd/MM/yyyy")}</TableCell>
+                              <TableCell className="font-medium">{Number(r.reading_value).toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-muted-foreground">{r.notes || "—"}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(r)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir?")) deleteReading.mutate(r.id); }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </TabsContent>
+        ))}
+      </Tabs>
+
+      {/* New/Edit Reading Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editId ? "Editar Leitura" : "Nova Leitura"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); saveReading.mutate(); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={form.connection_type} onValueChange={(v) => setForm({ ...form, connection_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="electricity">⚡ Energia</SelectItem>
+                  <SelectItem value="water">💧 Água</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Ligação</Label>
+              <Select value={form.connection_identifier} onValueChange={(v) => setForm({ ...form, connection_identifier: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CONNECTIONS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Data da Leitura *</Label>
+              <Input type="date" value={form.reading_date} onChange={(e) => setForm({ ...form, reading_date: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor da Leitura *</Label>
+              <Input type="number" step="0.01" value={form.reading_value} onChange={(e) => setForm({ ...form, reading_value: e.target.value })} required placeholder="Ex: 12345.67" />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+            </div>
+            <Button type="submit" className="w-full" disabled={saveReading.isPending}>
+              {saveReading.isPending ? "Salvando..." : editId ? "Salvar Alterações" : "Registrar Leitura"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Utilities;
