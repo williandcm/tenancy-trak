@@ -12,12 +12,11 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerOverlay,
-  DrawerPortal,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+  SheetOverlay,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 
 const navItems = [
@@ -131,32 +130,80 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   if (isMobile) {
+    const bottomNavItems = [
+      { to: "/", icon: LayoutDashboard, label: "Início" },
+      { to: "/contracts", icon: FileText, label: "Contratos" },
+      { to: "/payments", icon: CreditCard, label: "Recibos" },
+    ];
+
     return (
-      <div className="min-h-screen">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-          <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <DrawerTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Abrir Menu</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerPortal>
-              <DrawerOverlay className="fixed inset-0 bg-black/40" />
-              <DrawerContent
-                className="fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col gradient-primary text-primary-foreground"
-                showHandle={false}
-              >
-                <SidebarContent />
-              </DrawerContent>
-            </DrawerPortal>
-          </Drawer>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">LocaGest</h1>
+      <div className="min-h-screen bg-muted/20 pb-20">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/70 backdrop-blur-lg px-4 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              LocaGest
+            </h1>
           </div>
+          {profile && (
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
+              {initials}
+            </div>
+          )}
         </header>
-        <main className="p-4">{children}</main>
+
+        {/* Modal/Drawer de Menu */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetContent
+            side="left"
+            className="flex h-full w-[280px] p-0 flex-col gradient-primary text-primary-foreground outline-none border-none"
+          >
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+
+        {/* Content */}
+        <main className="p-4 space-y-4 animate-fade-in">{children}</main>
+
+        {/* Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t bg-background/80 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
+          {bottomNavItems.map((item) => {
+            const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 w-16 h-full transition-all flex-1",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
+                  active ? "bg-primary/10" : "bg-transparent"
+                )}>
+                  <item.icon className={cn("h-5 w-5 transition-transform", active ? "scale-110" : "scale-100")} />
+                </div>
+                <span className={cn("text-[10px] font-medium", active ? "font-bold" : "font-normal")}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+          
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 w-16 h-full transition-all flex-1 text-muted-foreground hover:text-foreground"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 bg-transparent">
+              <Menu className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-medium">Mais</span>
+          </button>
+        </nav>
       </div>
     );
   }

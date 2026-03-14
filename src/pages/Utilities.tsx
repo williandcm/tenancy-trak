@@ -664,7 +664,7 @@ const Utilities = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-2">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
             Cobranças
@@ -1393,7 +1393,7 @@ const Utilities = () => {
       <Dialog open={viewAttachmentOpen} onOpenChange={setViewAttachmentOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
           <DialogHeader className="p-4 pb-0">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <DialogTitle className="flex items-center gap-2">
                 <Paperclip className="h-5 w-5" /> Conta Anexada
               </DialogTitle>

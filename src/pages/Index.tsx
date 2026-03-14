@@ -166,7 +166,7 @@ const Dashboard = () => {
         {stats.map((stat, i) => (
           <Card key={stat.label} className="glass-card animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
               </div>
               <div className="mt-3">
@@ -314,14 +314,14 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-amber-500" />
                 <span className="text-sm">Energia</span>
               </div>
               <span className="font-bold">{money(monthElectricity)}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Droplets className="h-4 w-4 text-cyan-500" />
                 <span className="text-sm">Água</span>
@@ -349,15 +349,15 @@ const Dashboard = () => {
           <CardContent className="space-y-4">
             {currentYearIptu ? (
               <>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <span className="text-sm">IPTU + Taxa Lixo</span>
                   <span className="font-bold">{money(iptuTotal)}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <span className="text-sm">Parcelas</span>
                   <span className="text-sm text-muted-foreground">{currentYearIptu.numInstallments}x</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <span className="text-sm">Desconto Inquilino</span>
                   <Badge variant="secondary">{currentYearIptu.tenantDiscountPercent}%</Badge>
                 </div>
