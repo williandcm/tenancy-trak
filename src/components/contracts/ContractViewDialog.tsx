@@ -39,11 +39,11 @@ export default function ContractViewDialog({ open, onOpenChange, contract, onEdi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90dvh] overflow-y-auto sm:w-full rounded-xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-left">
             <DialogTitle className="text-xl">Detalhes do Contrato</DialogTitle>
-            <Badge variant={st.variant} className={`ml-3 ${(st as any).className || ""}`}>{st.label}</Badge>
+            <Badge variant={st.variant} className={`w-fit ${(st as any).className || ""}`}>{st.label}</Badge>
           </div>
         </DialogHeader>
 
@@ -53,22 +53,22 @@ export default function ContractViewDialog({ open, onOpenChange, contract, onEdi
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               <Building2 className="h-4 w-4" /> Partes
             </h3>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
               <div>
-                <span className="text-muted-foreground">Unidade</span>
+                <span className="text-muted-foreground block mb-0.5">Unidade</span>
                 <p className="font-medium">{c.units?.name} ({c.units?.address_number})</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Inquilino</span>
+                <span className="text-muted-foreground block mb-0.5">Inquilino</span>
                 <p className="font-medium">{c.tenants?.full_name}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Locador Principal</span>
+                <span className="text-muted-foreground block mb-0.5">Locador Principal</span>
                 <p className="font-medium">{c.landlords?.full_name}</p>
               </div>
               {c.second_landlord && (
                 <div>
-                  <span className="text-muted-foreground">Segundo Locador</span>
+                  <span className="text-muted-foreground block mb-0.5">Segundo Locador</span>
                   <p className="font-medium">{c.second_landlord?.full_name}</p>
                 </div>
               )}
@@ -82,17 +82,17 @@ export default function ContractViewDialog({ open, onOpenChange, contract, onEdi
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               <CalendarDays className="h-4 w-4" /> Período
             </h3>
-            <div className="grid grid-cols-3 gap-y-3 gap-x-6 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-6 text-sm">
               <div>
-                <span className="text-muted-foreground">Início</span>
+                <span className="text-muted-foreground block mb-0.5">Início</span>
                 <p className="font-medium">{fmt(c.start_date)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Término</span>
+                <span className="text-muted-foreground block mb-0.5">Término</span>
                 <p className="font-medium">{fmt(c.end_date)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Duração</span>
+                <span className="text-muted-foreground block mb-0.5">Duração</span>
                 <p className="font-medium">{c.duration_months} meses</p>
               </div>
             </div>
@@ -105,17 +105,17 @@ export default function ContractViewDialog({ open, onOpenChange, contract, onEdi
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               <DollarSign className="h-4 w-4" /> Valores
             </h3>
-            <div className="grid grid-cols-3 gap-y-3 gap-x-6 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-6 text-sm">
               <div>
-                <span className="text-muted-foreground">Aluguel Mensal</span>
-                <p className="font-medium text-lg">{money(c.monthly_rent)}</p>
+                <span className="text-muted-foreground block mb-0.5">Aluguel Mensal</span>
+                <p className="font-medium text-lg text-primary">{money(c.monthly_rent)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Dia do Vencimento</span>
+                <span className="text-muted-foreground block mb-0.5">Dia do Vencimento</span>
                 <p className="font-medium">Dia {c.payment_day}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Fiança / Depósito</span>
+                <span className="text-muted-foreground block mb-0.5">Fiança / Depósito</span>
                 <p className="font-medium">{money(c.deposit_amount)}</p>
               </div>
             </div>
@@ -128,25 +128,25 @@ export default function ContractViewDialog({ open, onOpenChange, contract, onEdi
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               <FileWarning className="h-4 w-4" /> Multas e Reajuste
             </h3>
-            <div className="grid grid-cols-3 gap-y-3 gap-x-6 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-6 text-sm">
               <div>
-                <span className="text-muted-foreground">Multa diária</span>
+                <span className="text-muted-foreground block mb-0.5">Multa diária</span>
                 <p className="font-medium">{c.late_fee_percent ?? 0.33}%</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Multa máxima</span>
+                <span className="text-muted-foreground block mb-0.5">Multa máxima</span>
                 <p className="font-medium">{c.late_fee_max_percent ?? 20}%</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Índice de Reajuste</span>
+                <span className="text-muted-foreground block mb-0.5">Índice de Reajuste</span>
                 <p className="font-medium">{c.adjustment_index ?? "IGP-M"}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Multa rescisão</span>
+                <span className="text-muted-foreground block mb-0.5">Multa rescisão</span>
                 <p className="font-medium">{c.rescission_penalty_months ?? 3} meses de aluguel</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Taxa de limpeza</span>
+                <span className="text-muted-foreground block mb-0.5">Taxa de limpeza</span>
                 <p className="font-medium">{money(c.cleaning_fee)}</p>
               </div>
             </div>

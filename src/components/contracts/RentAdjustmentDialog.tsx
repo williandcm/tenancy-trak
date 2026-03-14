@@ -123,7 +123,7 @@ export default function RentAdjustmentDialog({ open, onOpenChange, contracts, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90dvh] overflow-y-auto sm:w-full rounded-xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -136,7 +136,7 @@ export default function RentAdjustmentDialog({ open, onOpenChange, contracts, on
 
         <div className="space-y-6">
           {/* Settings */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Percentual de Reajuste (%)</Label>
               <Input

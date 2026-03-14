@@ -434,7 +434,7 @@ const IptuBillingDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90dvh] overflow-y-auto sm:w-full rounded-xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Landmark className="h-5 w-5" />
@@ -488,7 +488,7 @@ const IptuBillingDialog = ({
                 {/* Record summary */}
                 <Card className="glass-card bg-muted/30">
                   <CardContent className="p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
                         <p className="text-xs text-muted-foreground">
                           Total À Vista

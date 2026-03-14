@@ -204,7 +204,7 @@ export default function ContractFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[90dvh] overflow-y-auto sm:w-full rounded-xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {isEdit ? "Editar Contrato" : prefill ? "Solicitar Contrato" : "Novo Contrato de Locação"}
@@ -217,7 +217,7 @@ export default function ContractFormDialog({
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Partes do Contrato
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className={errors.unit_id ? "text-destructive" : ""}>Unidade *</Label>
                 <Select value={form.unit_id} onValueChange={(v) => update("unit_id", v)}>
@@ -278,7 +278,7 @@ export default function ContractFormDialog({
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Período e Valores
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className={errors.start_date ? "text-destructive" : ""}>Data Início *</Label>
                 <Input ref={(el) => { fieldRefs.current.start_date = el; }} type="date" value={form.start_date} onChange={(e) => update("start_date", e.target.value)} className={errors.start_date ? "border-destructive ring-1 ring-destructive" : ""} />
@@ -322,7 +322,7 @@ export default function ContractFormDialog({
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Multas e Reajuste
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Multa diária (%)</Label>
                 <Input type="number" step="0.01" value={form.late_fee_percent} onChange={(e) => update("late_fee_percent", e.target.value)} />
