@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string, sessionUser?: User | null) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
       .select("*")
@@ -60,17 +60,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (data) {
       const p = data as unknown as Profile;
       // Fallback: if tenant_id is not in profiles table, get from user_metadata
+      // Always call getUser() to get fresh data from the server (not cached JWT)
       if (!p.tenant_id) {
-        // Try from the session user first (avoids extra API call)
-        const metadata = sessionUser?.user_metadata;
-        if (metadata?.tenant_id) {
-          p.tenant_id = metadata.tenant_id;
-        } else {
-          // Last resort: fetch fresh user data
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          if (authUser?.user_metadata?.tenant_id) {
-            p.tenant_id = authUser.user_metadata.tenant_id;
+        try {
+          const { data: { user: freshUser } } = await supabase.auth.getUser();
+          if (freshUser?.user_metadata?.tenant_id) {
+            p.tenant_id = freshUser.user_metadata.tenant_id;
           }
+        } catch (e) {
+          console.warn("Could not fetch fresh user data:", e);
         }
       }
       setProfile(p);
@@ -79,7 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      await fetchProfile(user.id, user);
+      await fetchProfile(user.id);
     }
   }, [user, fetchProfile]);
 
@@ -89,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id, session.user), 0);
+          setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
         }
@@ -101,7 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user);
+        await fetchProfile(session.user.id);
       }
       setLoading(false);
     });
