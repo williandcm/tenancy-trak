@@ -590,7 +590,18 @@ const Users = () => {
             {!editProfile && (
               <div className="space-y-2">
                 <Label>Senha para Primeiro Acesso *</Label>
-                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} placeholder="Mínimo 6 caracteres" />
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  minLength={6}
+                  placeholder="Digite uma senha temporária (mín. 6 caracteres)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O usuário será obrigado a alterar esta senha no primeiro acesso ao sistema.
+                </p>
               </div>
             )}
             <Separator />

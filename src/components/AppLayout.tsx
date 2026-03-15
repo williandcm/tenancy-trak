@@ -4,7 +4,7 @@ import {
   Building2, LayoutDashboard, DoorOpen, Users, FileText,
   CreditCard, Zap, Bell, LogOut, ChevronLeft, ChevronRight,
   Shield, UserCheck, BookOpen, FileEdit, Landmark, BarChart3,
-  User, Home,
+  User, Home, Lock, Eye, EyeOff, Loader2, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -18,6 +18,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const adminNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -40,11 +45,48 @@ const tenantNavItems = [
 ];
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { signOut, hasPermission, profile } = useAuth();
+  const { signOut, hasPermission, profile, mustChangePassword, refreshProfile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
+      if (pwError) throw pwError;
+
+      const { error: metaError } = await supabase.auth.updateUser({
+        data: { must_change_password: false },
+      });
+      if (metaError) throw metaError;
+
+      toast.success("Senha alterada com sucesso!");
+      setNewPassword("");
+      setConfirmPassword("");
+      await refreshProfile();
+    } catch (err: any) {
+      console.error("Error changing password:", err);
+      toast.error(err?.message || "Erro ao alterar a senha. Tente novamente.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   const isTenant = profile?.role === "tenant";
 
@@ -335,6 +377,85 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       >
         <div className="p-4 md:p-6 lg:p-8">{children}</div>
       </main>
+
+      {/* Mandatory Password Change Modal */}
+      <Dialog open={mustChangePassword} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md [&>button]:hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <DialogTitle className="text-xl">Alteração de Senha Obrigatória</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Por segurança, é necessário alterar sua senha no primeiro acesso.
+              Escolha uma nova senha com pelo menos 6 caracteres.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="Digite sua nova senha"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={changingPassword}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+              <Input
+                id="confirm-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Confirme sua nova senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={changingPassword}
+              />
+            </div>
+            {newPassword.length > 0 && newPassword.length < 6 && (
+              <p className="text-xs text-destructive">A senha deve ter pelo menos 6 caracteres.</p>
+            )}
+            {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">As senhas não coincidem.</p>
+            )}
+            <Button
+              className="w-full"
+              onClick={handleChangePassword}
+              disabled={changingPassword || newPassword.length < 6 || newPassword !== confirmPassword}
+            >
+              {changingPassword ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Alterando...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Alterar Senha
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

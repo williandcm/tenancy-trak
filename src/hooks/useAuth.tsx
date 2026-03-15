@@ -62,23 +62,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .single();
     if (data) {
       const p = data as unknown as Profile;
-      // Fallback: if tenant_id is not in profiles table, get from user_metadata
       // Always call getUser() to get fresh data from the server (not cached JWT)
+      // Needed for: tenant_id fallback + must_change_password flag
       let freshUser: User | null = null;
-      if (!p.tenant_id || p.role === "tenant") {
-        try {
-          const { data: { user: u } } = await supabase.auth.getUser();
-          freshUser = u;
-          if (!p.tenant_id && freshUser?.user_metadata?.tenant_id) {
-            p.tenant_id = freshUser.user_metadata.tenant_id;
-          }
-        } catch (e) {
-          console.warn("Could not fetch fresh user data:", e);
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser();
+        freshUser = u;
+        // Fallback: if tenant_id is not in profiles table, get from user_metadata
+        if (!p.tenant_id && freshUser?.user_metadata?.tenant_id) {
+          p.tenant_id = freshUser.user_metadata.tenant_id;
         }
+      } catch (e) {
+        console.warn("Could not fetch fresh user data:", e);
       }
       // Check if user must change password on first login
-      const meta = freshUser?.user_metadata;
-      setMustChangePassword(!!meta?.must_change_password);
+      setMustChangePassword(!!freshUser?.user_metadata?.must_change_password);
       setProfile(p);
     }
   }, []);

@@ -5,11 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import {
   Building2,
   DollarSign,
@@ -34,9 +29,6 @@ import {
   CalendarClock,
   ShieldCheck,
   Info,
-  Lock,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import { format, isBefore, differenceInDays, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -75,16 +67,10 @@ interface PaymentInfo {
 }
 
 const TenantPortal = () => {
-  const { profile, mustChangePassword, refreshProfile } = useAuth();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [contract, setContract] = useState<ContractInfo | null>(null);
   const [payments, setPayments] = useState<PaymentInfo[]>([]);
-
-  // Password change state
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!profile?.tenant_id) {
@@ -187,120 +173,9 @@ const TenantPortal = () => {
   const formatCurrency = (val: number) =>
     val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
-      return;
-    }
-    setChangingPassword(true);
-    try {
-      const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
-      if (pwError) throw pwError;
-
-      const { error: metaError } = await supabase.auth.updateUser({
-        data: { must_change_password: false },
-      });
-      if (metaError) throw metaError;
-
-      toast.success("Senha alterada com sucesso!");
-      setNewPassword("");
-      setConfirmPassword("");
-      await refreshProfile();
-    } catch (err: any) {
-      console.error("Error changing password:", err);
-      toast.error(err?.message || "Erro ao alterar a senha. Tente novamente.");
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  // Mandatory password change modal
-  const passwordChangeModal = (
-    <Dialog open={mustChangePassword} onOpenChange={() => {}}>
-      <DialogContent
-        className="sm:max-w-md [&>button]:hidden"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        <DialogHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10">
-            <Lock className="h-8 w-8 text-primary" />
-          </div>
-          <DialogTitle className="text-xl">Alteração de Senha Obrigatória</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Por segurança, é necessário alterar sua senha no primeiro acesso.
-            Escolha uma nova senha com pelo menos 6 caracteres.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label htmlFor="new-password">Nova Senha</Label>
-            <div className="relative">
-              <Input
-                id="new-password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Digite sua nova senha"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                disabled={changingPassword}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
-            <Input
-              id="confirm-password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Confirme sua nova senha"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={changingPassword}
-            />
-          </div>
-          {newPassword.length > 0 && newPassword.length < 6 && (
-            <p className="text-xs text-destructive">A senha deve ter pelo menos 6 caracteres.</p>
-          )}
-          {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-            <p className="text-xs text-destructive">As senhas não coincidem.</p>
-          )}
-          <Button
-            className="w-full"
-            onClick={handleChangePassword}
-            disabled={changingPassword || newPassword.length < 6 || newPassword !== confirmPassword}
-          >
-            {changingPassword ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Alterando...
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                Alterar Senha
-              </>
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        {passwordChangeModal}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div className="h-16 w-16 rounded-full border-4 border-primary/20" />
@@ -315,7 +190,6 @@ const TenantPortal = () => {
   if (!contract) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
-        {passwordChangeModal}
         <div className="relative">
           <div className="h-24 w-24 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center shadow-lg shadow-amber-100/50">
             <AlertTriangle className="h-10 w-10 text-amber-600" />
@@ -337,7 +211,6 @@ const TenantPortal = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      {passwordChangeModal}
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[hsl(220,60%,22%)] via-[hsl(220,55%,28%)] to-[hsl(220,50%,35%)] p-6 md:p-8 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
