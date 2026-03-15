@@ -261,6 +261,7 @@ export type Database = {
           is_active: boolean
           phone: string | null
           role: string
+          tenant_id: string | null
           updated_at: string
           user_id: string
         }
@@ -272,6 +273,7 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -283,6 +285,7 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string
         }

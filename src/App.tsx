@@ -19,21 +19,38 @@ import Help from "./pages/Help";
 import ContractTemplate from "./pages/ContractTemplate";
 import IPTU from "./pages/IPTU";
 import Reports from "./pages/Reports";
+import TenantPortal from "./pages/TenantPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+/** Route for admin/manager/operator/viewer roles — redirects tenants */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Carregando...</p></div>;
   if (!session) return <Navigate to="/auth" replace />;
+  // Redirect tenants to their portal
+  if (profile?.role === "tenant") return <Navigate to="/portal" replace />;
+  return <AppLayout>{children}</AppLayout>;
+};
+
+/** Route exclusively for tenants */
+const TenantRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading } = useAuth();
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Carregando...</p></div>;
+  if (!session) return <Navigate to="/auth" replace />;
+  // Non-tenant users go to main dashboard
+  if (profile && profile.role !== "tenant") return <Navigate to="/" replace />;
   return <AppLayout>{children}</AppLayout>;
 };
 
 const AuthRoute = () => {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   if (loading) return null;
-  if (session) return <Navigate to="/" replace />;
+  if (session) {
+    if (profile?.role === "tenant") return <Navigate to="/portal" replace />;
+    return <Navigate to="/" replace />;
+  }
   return <Auth />;
 };
 
@@ -59,6 +76,7 @@ const App = () => (
             <Route path="/contract-template" element={<ProtectedRoute><ContractTemplate /></ProtectedRoute>} />
             <Route path="/iptu" element={<ProtectedRoute><IPTU /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/portal" element={<TenantRoute><TenantPortal /></TenantRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

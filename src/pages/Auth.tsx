@@ -8,7 +8,6 @@ import {
   KeyRound,
   Mail,
   Lock,
-  User,
   ArrowRight,
   Home,
   Shield,
@@ -20,34 +19,17 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [tab, setTab] = useState<"login" | "signup">("login");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast.error(error.message);
-    }
-    setLoading(false);
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Verifique seu e-mail para confirmar o cadastro.");
+      if (error.message === "Invalid login credentials") {
+        toast.error("E-mail ou senha incorretos.");
+      } else {
+        toast.error(error.message);
+      }
     }
     setLoading(false);
   };
@@ -62,7 +44,6 @@ const Auth = () => {
     <div className="flex min-h-screen">
       {/* Left Panel — Branding */}
       <div className="relative hidden w-1/2 overflow-hidden lg:flex lg:flex-col lg:justify-between gradient-primary p-12">
-        {/* Decorative circles */}
         <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-white/5" />
         <div className="pointer-events-none absolute right-20 top-1/3 h-64 w-64 rounded-full bg-white/[0.03]" />
@@ -80,10 +61,7 @@ const Auth = () => {
 
         <div className="relative z-10 space-y-8">
           <div>
-            <h2
-              className="text-4xl font-bold leading-tight text-white"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
+            <h2 className="text-4xl font-bold leading-tight text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
               Simplifique a gestão
               <br />
               dos seus imóveis
@@ -116,7 +94,7 @@ const Auth = () => {
         </p>
       </div>
 
-      {/* Right Panel — Form */}
+      {/* Right Panel — Login Form */}
       <div className="flex w-full flex-col items-center justify-center bg-background px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-[420px]">
           {/* Mobile logo */}
@@ -131,190 +109,58 @@ const Auth = () => {
 
           {/* Heading */}
           <div className="mb-8">
-            <h2
-              className="text-3xl font-bold text-foreground"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              {tab === "login" ? "Bem-vindo de volta" : "Crie sua conta"}
+            <h2 className="text-3xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Bem-vindo de volta
             </h2>
             <p className="mt-2 text-muted-foreground">
-              {tab === "login"
-                ? "Entre com suas credenciais para acessar o painel"
-                : "Preencha os dados abaixo para começar a gerenciar"}
+              Entre com suas credenciais para acessar o painel
             </p>
           </div>
 
-          {/* Tab switcher */}
-          <div className="mb-6 flex rounded-xl bg-muted p-1">
-            <button
-              type="button"
-              onClick={() => setTab("login")}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition-all ${
-                tab === "login"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("signup")}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition-all ${
-                tab === "signup"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Cadastrar
-            </button>
-          </div>
-
-          {/* Login form */}
-          {tab === "login" && (
-            <form onSubmit={handleLogin} className="animate-fade-in space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="login-email" className="text-sm font-medium">
-                  E-mail
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="seu@email.com"
-                    className="h-11 pl-10"
-                  />
-                </div>
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="animate-fade-in space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="login-email" className="text-sm font-medium">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="seu@email.com"
+                  className="h-11 pl-10"
+                />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="login-password" className="text-sm font-medium">
-                  Senha
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="h-11 pl-10"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="h-11 pl-10"
+                />
               </div>
+            </div>
 
-              <Button
-                type="submit"
-                className="group h-11 w-full gap-2 text-sm font-semibold"
-                disabled={loading}
-              >
-                <KeyRound className="h-4 w-4" />
-                {loading ? "Entrando..." : "Entrar"}
-                {!loading && (
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                )}
-              </Button>
+            <Button type="submit" className="group h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+              <KeyRound className="h-4 w-4" />
+              {loading ? "Entrando..." : "Entrar"}
+              {!loading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+            </Button>
+          </form>
 
-              <p className="text-center text-sm text-muted-foreground">
-                Não tem uma conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("signup")}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  Cadastre-se
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* Signup form */}
-          {tab === "signup" && (
-            <form onSubmit={handleSignUp} className="animate-fade-in space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="signup-name" className="text-sm font-medium">
-                  Nome completo
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    placeholder="Seu nome"
-                    className="h-11 pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-email" className="text-sm font-medium">
-                  E-mail
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="seu@email.com"
-                    className="h-11 pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-sm font-medium">
-                  Senha
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    placeholder="Mínimo 6 caracteres"
-                    className="h-11 pl-10"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="group h-11 w-full gap-2 text-sm font-semibold"
-                disabled={loading}
-              >
-                {loading ? "Cadastrando..." : "Criar conta"}
-                {!loading && (
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                )}
-              </Button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                Já tem uma conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("login")}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  Faça login
-                </button>
-              </p>
-            </form>
-          )}
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Acesso restrito. Solicite suas credenciais ao administrador.
+          </p>
         </div>
       </div>
     </div>

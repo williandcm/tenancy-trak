@@ -2,7 +2,7 @@ import { useEffect, useState, createContext, useContext, useCallback } from "rea
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
-export type UserRole = "admin" | "manager" | "operator" | "viewer";
+export type UserRole = "admin" | "manager" | "operator" | "viewer" | "tenant";
 
 interface Profile {
   id: string;
@@ -12,6 +12,7 @@ interface Profile {
   phone: string | null;
   role: UserRole;
   is_active: boolean;
+  tenant_id: string | null;
 }
 
 interface AuthContextType {
@@ -25,10 +26,11 @@ interface AuthContextType {
 }
 
 const roleHierarchy: Record<UserRole, number> = {
-  admin: 4,
-  manager: 3,
-  operator: 2,
-  viewer: 1,
+  admin: 5,
+  manager: 4,
+  operator: 3,
+  viewer: 2,
+  tenant: 1,
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -56,7 +58,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .eq("user_id", userId)
       .single();
     if (data) {
-      setProfile(data as Profile);
+      const p = data as unknown as Profile;
+      // Fallback: if tenant_id is not in profiles table, get from user_metadata
+      if (!p.tenant_id) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.user_metadata?.tenant_id) {
+          p.tenant_id = authUser.user_metadata.tenant_id;
+        }
+      }
+      setProfile(p);
     }
   }, []);
 

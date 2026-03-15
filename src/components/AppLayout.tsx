@@ -4,7 +4,7 @@ import {
   Building2, LayoutDashboard, DoorOpen, Users, FileText,
   CreditCard, Zap, Bell, LogOut, ChevronLeft, ChevronRight,
   Shield, UserCheck, BookOpen, FileEdit, Landmark, BarChart3,
-  User,
+  User, Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 
-const navItems = [
+const adminNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/units", icon: DoorOpen, label: "Unidades" },
   { to: "/tenants", icon: Users, label: "Inquilinos" },
@@ -35,12 +35,20 @@ const navItems = [
   { to: "/help", icon: BookOpen, label: "Ajuda" },
 ];
 
+const tenantNavItems = [
+  { to: "/portal", icon: Home, label: "Minha Sala" },
+];
+
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, hasPermission, profile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const isTenant = profile?.role === "tenant";
+
+  const navItems = isTenant ? tenantNavItems : adminNavItems;
 
   const visibleNavItems = navItems.filter(
     (item) => !(item as any).adminOnly || hasPermission("admin")
@@ -51,6 +59,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     manager: "Gerente",
     operator: "Operador",
     viewer: "Visualizador",
+    tenant: "Inquilino",
   };
 
   const initials = profile?.full_name
@@ -130,11 +139,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   if (isMobile) {
-    const bottomNavItems = [
-      { to: "/", icon: LayoutDashboard, label: "Início" },
-      { to: "/contracts", icon: FileText, label: "Contratos" },
-      { to: "/payments", icon: CreditCard, label: "Recibos" },
-    ];
+    const bottomNavItems = isTenant
+      ? [{ to: "/portal", icon: Home, label: "Minha Sala" }]
+      : [
+          { to: "/", icon: LayoutDashboard, label: "Início" },
+          { to: "/contracts", icon: FileText, label: "Contratos" },
+          { to: "/payments", icon: CreditCard, label: "Recibos" },
+        ];
 
     return (
       <div className="min-h-screen bg-muted/20 pb-20">
