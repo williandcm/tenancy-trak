@@ -69,7 +69,7 @@ const TenantPortal = () => {
       return;
     }
     loadTenantData();
-  }, [profile]);
+  }, [profile?.tenant_id]);
 
   const loadTenantData = async () => {
     setLoading(true);
