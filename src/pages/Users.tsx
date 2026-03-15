@@ -88,7 +88,12 @@ const Users = () => {
         email: form.email,
         password: form.password,
         email_confirm: true,
-        user_metadata: { full_name: form.full_name, role: form.role, tenant_id: tenantId },
+        user_metadata: {
+          full_name: form.full_name,
+          role: form.role,
+          tenant_id: tenantId,
+          must_change_password: true,
+        },
       });
       if (authError) throw authError;
 

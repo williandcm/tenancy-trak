@@ -20,6 +20,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  mustChangePassword: boolean;
   signOut: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
   refreshProfile: () => Promise<void>;
@@ -38,6 +39,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  mustChangePassword: false,
   signOut: async () => {},
   hasPermission: () => false,
   refreshProfile: async () => {},
@@ -50,6 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -61,16 +64,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const p = data as unknown as Profile;
       // Fallback: if tenant_id is not in profiles table, get from user_metadata
       // Always call getUser() to get fresh data from the server (not cached JWT)
-      if (!p.tenant_id) {
+      let freshUser: User | null = null;
+      if (!p.tenant_id || p.role === "tenant") {
         try {
-          const { data: { user: freshUser } } = await supabase.auth.getUser();
-          if (freshUser?.user_metadata?.tenant_id) {
+          const { data: { user: u } } = await supabase.auth.getUser();
+          freshUser = u;
+          if (!p.tenant_id && freshUser?.user_metadata?.tenant_id) {
             p.tenant_id = freshUser.user_metadata.tenant_id;
           }
         } catch (e) {
           console.warn("Could not fetch fresh user data:", e);
         }
       }
+      // Check if user must change password on first login
+      const meta = freshUser?.user_metadata;
+      setMustChangePassword(!!meta?.must_change_password);
       setProfile(p);
     }
   }, []);
@@ -118,7 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut, hasPermission, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, signOut, hasPermission, refreshProfile, mustChangePassword }}>
       {children}
     </AuthContext.Provider>
   );
