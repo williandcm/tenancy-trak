@@ -273,19 +273,19 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
-          "bg-card border-r border-border shadow-sm text-card-foreground",
+          "bg-slate-950 border-r border-slate-800 shadow-2xl text-slate-300",
           collapsed ? "w-16" : "w-64"
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-border/50 px-4 bg-background/50 backdrop-blur-sm">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 shadow-inner">
-            <Building2 className="h-5 w-5 text-primary-foreground" />
+        <div className="flex h-16 items-center gap-3 border-b border-slate-800/80 px-4 bg-slate-950/50 backdrop-blur-sm">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner">
+            <Building2 className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in flex flex-col justify-center">
-              <h1 className="text-[17px] font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent leading-none mt-1">LocaGest</h1>
-              <p className="text-[10px] font-medium opacity-70 tracking-wide mt-0.5">GESTÃO DE LOCAÇÕES</p>
+              <h1 className="text-[17px] font-extrabold tracking-tight text-white leading-none mt-1">LocaGest</h1>
+              <p className="text-[10px] font-medium opacity-60 tracking-wide mt-0.5 text-blue-200">GESTÃO DE LOCAÇÕES</p>
             </div>
           )}
         </div>
@@ -303,20 +303,20 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                       className={cn(
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
                         active
-                          ? "bg-primary/10 text-primary shadow-sm"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                          ? "bg-blue-600/20 text-blue-400 shadow-sm"
+                          : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200",
                         collapsed && "justify-center"
                       )}
                     >
                       {active && !collapsed && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-md" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-r-md shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                       )}
                       <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0 transition-transform duration-200", active ? "scale-110" : "group-hover:scale-110")} />
                       {!collapsed && <span>{item.label}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && (
-                    <TooltipContent side="right">{item.label}</TooltipContent>
+                    <TooltipContent side="right" className="bg-slate-800 text-slate-100 border-slate-700">{item.label}</TooltipContent>
                   )}
                 </Tooltip>
               </TooltipProvider>
@@ -325,24 +325,24 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {/* Footer - User Info + Logout */}
-        <div className="border-t border-border/50 p-3 space-y-2 bg-background/30 backdrop-blur-sm">
+        <div className="border-t border-slate-800/80 p-3 space-y-2 bg-slate-900/30 backdrop-blur-sm">
           {/* User info */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors cursor-pointer hover:bg-muted/50",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors cursor-pointer hover:bg-slate-800/50",
                   collapsed ? "justify-center" : ""
                 )}>
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-xs font-bold border border-primary/20 shadow-sm">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-800 text-blue-400 text-xs font-bold border border-slate-700 shadow-sm">
                     {initials}
                   </div>
                   {!collapsed && profile && (
                     <div className="min-w-0 animate-fade-in text-left">
-                      <p className="text-sm font-semibold leading-tight truncate text-foreground">
+                      <p className="text-sm font-semibold leading-tight truncate text-slate-200">
                         {profile.full_name}
                       </p>
-                      <p className="text-[10px] font-medium opacity-70 truncate px-1.5 py-0.5 bg-muted rounded-md mt-1 inline-block">
+                      <p className="text-[10px] font-medium opacity-80 truncate px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded-md mt-1 inline-block border border-slate-700">
                         {roleLabels[profile.role] || profile.role}
                       </p>
                     </div>
@@ -350,9 +350,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
               </TooltipTrigger>
               {collapsed && profile && (
-                <TooltipContent side="right" className="text-xs">
+                <TooltipContent side="right" className="text-xs bg-slate-800 text-slate-100 border-slate-700">
                   <p className="font-semibold">{profile.full_name}</p>
-                  <p className="text-muted-foreground">{roleLabels[profile.role] || profile.role}</p>
+                  <p className="text-slate-400">{roleLabels[profile.role] || profile.role}</p>
                 </TooltipContent>
               )}
             </Tooltip>
@@ -362,7 +362,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <button
             onClick={signOut}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors group",
+              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors group",
               collapsed ? "justify-center" : ""
             )}
           >
@@ -374,7 +374,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-50"
+          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 border border-slate-700 shadow-sm text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors z-50 transition-transform hover:scale-110"
         >
           {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </button>
