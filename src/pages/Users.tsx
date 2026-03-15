@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { supabaseAdmin } from "@/integrations/supabase/admin";
+import { callAdminFunction } from "@/integrations/supabase/admin-api";
 import { useAuth, type UserRole } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,60 +83,15 @@ const Users = () => {
     mutationFn: async () => {
       const tenantId = form.role === "tenant" && form.tenant_id ? form.tenant_id : null;
 
-      // Create auth user via admin API (store tenant_id in metadata as well)
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      await callAdminFunction({
+        action: "create-user",
         email: form.email,
         password: form.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: form.full_name,
-          role: form.role,
-          tenant_id: tenantId,
-          must_change_password: true,
-        },
+        full_name: form.full_name,
+        role: form.role,
+        phone: form.phone || null,
+        tenant_id: tenantId,
       });
-      if (authError) throw authError;
-
-      // Wait for the profile trigger to create the row, then update it
-      if (authData.user) {
-        // First update without tenant_id (always works)
-        const profileBase: Record<string, any> = {
-          full_name: form.full_name,
-          phone: form.phone || null,
-          role: form.role,
-        };
-
-        // Retry up to 5 times with 500ms delay to wait for profile trigger
-        let retries = 5;
-        let profileError: any = null;
-        while (retries > 0) {
-          const { error } = await supabaseAdmin
-            .from("profiles")
-            .update(profileBase)
-            .eq("user_id", authData.user.id);
-          profileError = error;
-          if (!error) break;
-          retries--;
-          if (retries > 0) await new Promise((r) => setTimeout(r, 500));
-        }
-
-        // If basic profile update failed, rollback auth user
-        if (profileError) {
-          await supabaseAdmin.auth.admin.deleteUser(authData.user.id).catch(() => {});
-          throw profileError;
-        }
-
-        // Now try to set tenant_id separately (column may not exist yet)
-        if (tenantId) {
-          await supabaseAdmin
-            .from("profiles")
-            .update({ tenant_id: tenantId } as any)
-            .eq("user_id", authData.user.id)
-            .then(({ error }) => {
-              if (error) console.warn("tenant_id column not available yet:", error.message);
-            });
-        }
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -161,49 +116,19 @@ const Users = () => {
       if (!editProfile) return;
 
       const tenantId = form.role === "tenant" && form.tenant_id ? form.tenant_id : null;
-
-      // If email changed (admin only), update in auth.users first
       const emailChanged = form.email !== editProfile.email;
-      if (emailChanged && hasPermission("admin")) {
-        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-          editProfile.user_id,
-          { email: form.email, email_confirm: true }
-        );
-        if (authError) throw authError;
-      }
 
-      // Also update tenant_id in user_metadata
-      await supabaseAdmin.auth.admin.updateUserById(
-        editProfile.user_id,
-        { user_metadata: { full_name: form.full_name, role: form.role, tenant_id: tenantId } }
-      ).catch(() => {});
-
-      // Update profile (without tenant_id first)
-      const profileUpdate: Record<string, any> = {
+      await callAdminFunction({
+        action: "update-user",
+        user_id: editProfile.user_id,
+        profile_id: editProfile.id,
+        email: form.email,
         full_name: form.full_name,
-        phone: form.phone || null,
         role: form.role,
-      };
-      if (emailChanged && hasPermission("admin")) {
-        profileUpdate.email = form.email;
-      }
-
-      const { error } = await supabaseAdmin
-        .from("profiles")
-        .update(profileUpdate)
-        .eq("id", editProfile.id);
-      if (error) throw error;
-
-      // Try to set tenant_id separately (column may not exist yet)
-      if (tenantId) {
-        await supabaseAdmin
-          .from("profiles")
-          .update({ tenant_id: tenantId } as any)
-          .eq("id", editProfile.id)
-          .then(({ error }) => {
-            if (error) console.warn("tenant_id column not available yet:", error.message);
-          });
-      }
+        phone: form.phone || null,
+        tenant_id: tenantId,
+        email_changed: emailChanged,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -217,11 +142,11 @@ const Users = () => {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabaseAdmin
-        .from("profiles")
-        .update({ is_active })
-        .eq("id", id);
-      if (error) throw error;
+      await callAdminFunction({
+        action: "toggle-active",
+        profile_id: id,
+        is_active,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -232,10 +157,11 @@ const Users = () => {
   const resetPassword = useMutation({
     mutationFn: async () => {
       if (!resetPwdId || !newPassword) return;
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(resetPwdId, {
-        password: newPassword,
+      await callAdminFunction({
+        action: "reset-password",
+        user_id: resetPwdId,
+        new_password: newPassword,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       setResetPwdId(null);
@@ -247,8 +173,10 @@ const Users = () => {
 
   const deleteUser = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      await callAdminFunction({
+        action: "delete-user",
+        user_id: userId,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { DEFAULT_TEMPLATE, TEMPLATE_KEY, getTenantTemplateKey } from "@/pages/ContractTemplate";
+import DOMPurify from "dompurify";
 
 const fmt = (v: string) => format(new Date(v + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 const money = (v: number | null) =>
@@ -157,7 +158,7 @@ export default function ContractPrintView({ open, onOpenChange, contract }: Prop
     setTimeout(() => printWindow.print(), 300);
   };
 
-  const processedHtml = processTemplate();
+  const processedHtml = DOMPurify.sanitize(processTemplate());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

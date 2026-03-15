@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { supabaseAdmin } from "@/integrations/supabase/admin";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -212,7 +211,7 @@ const Utilities = () => {
     const path = `bills/${billId}.${ext}`;
     setUploading(true);
     try {
-      const { error } = await supabaseAdmin.storage
+      const { error } = await supabase.storage
         .from("bill-attachments")
         .upload(path, attachmentFile, { upsert: true, contentType: attachmentFile.type });
       if (error) throw error;
@@ -228,7 +227,7 @@ const Utilities = () => {
 
   const deleteAttachment = async (path: string) => {
     try {
-      await supabaseAdmin.storage.from("bill-attachments").remove([path]);
+      await supabase.storage.from("bill-attachments").remove([path]);
     } catch (err) {
       console.error("Error deleting attachment:", err);
     }
@@ -236,7 +235,7 @@ const Utilities = () => {
 
   const openAttachment = async (path: string) => {
     try {
-      const { data, error } = await supabaseAdmin.storage
+      const { data, error } = await supabase.storage
         .from("bill-attachments")
         .createSignedUrl(path, 3600); // 1 hour
       if (error) throw error;
