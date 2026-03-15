@@ -383,7 +383,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main content */}
       <main
         className={cn(
-          "flex-1 transition-all duration-300 bg-muted/20 min-h-screen",
+          "flex-1 transition-all duration-300 bg-background min-h-screen",
           collapsed ? "ml-16" : "ml-64"
         )}
       >
