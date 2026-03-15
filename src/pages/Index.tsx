@@ -141,38 +141,65 @@ const Dashboard = () => {
   const money = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   const stats = [
-    { label: "Unidades", value: totalUnits, icon: DoorOpen, color: "text-info", sub: `${occupancyRate}% ocupação` },
-    { label: "Ocupadas", value: occupiedUnits, icon: Building2, color: "text-success", sub: `${availableUnits} disponíveis` },
-    { label: "Contratos Ativos", value: activeContracts.length, icon: FileText, color: "text-secondary", sub: `${contracts?.length ?? 0} total` },
-    { label: "Receita Mensal", value: money(monthlyRevenue), icon: TrendingUp, color: "text-success", sub: "contratos ativos" },
-    { label: "Pag. Atrasados", value: overduePayments.length, icon: AlertTriangle, color: "text-destructive", sub: money(totalOverdue) },
-    { label: "Inadimplência", value: `${inadimplenciaRate.toFixed(1)}%`, icon: Percent, color: inadimplenciaRate > 10 ? "text-destructive" : inadimplenciaRate > 0 ? "text-warning" : "text-success", sub: inadimplenciaRate === 0 ? "Excelente!" : inadimplenciaRate <= 10 ? "Controlada" : "Atenção!" },
-    { label: "Recebido no Ano", value: money(totalReceivedYear), icon: CheckCircle2, color: "text-success", sub: yearStr },
-    { label: "Inquilinos", value: tenants?.length ?? 0, icon: Users, color: "text-info", sub: "cadastrados" },
+    { label: "Unidades", value: totalUnits, icon: DoorOpen, color: "text-blue-600", bg: "bg-blue-100/50", sub: `${occupancyRate}% ocupação` },
+    { label: "Ocupadas", value: occupiedUnits, icon: Building2, color: "text-emerald-600", bg: "bg-emerald-100/50", sub: `${availableUnits} disponíveis` },
+    { label: "Contratos", value: activeContracts.length, icon: FileText, color: "text-amber-600", bg: "bg-amber-100/50", sub: `${contracts?.length ?? 0} total` },
+    { label: "Receita Mês", value: money(monthlyRevenue), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-100/50", sub: "contratos ativos" },
+    { label: "Inadimplência", value: `${inadimplenciaRate.toFixed(1)}%`, icon: Percent, color: inadimplenciaRate > 10 ? "text-red-600" : "text-emerald-600", bg: inadimplenciaRate > 10 ? "bg-red-100/50" : "bg-emerald-100/50", sub: inadimplenciaRate === 0 ? "Excelente!" : "Atenção!" },
+    { label: "Pag. Atrasados", value: overduePayments.length, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-100/50", sub: money(totalOverdue) },
+    { label: "Total no Ano", value: money(totalReceivedYear), icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100/50", sub: yearStr },
+    { label: "Inquilinos", value: tenants?.length ?? 0, icon: Users, color: "text-blue-600", bg: "bg-blue-100/50", sub: "cadastrados" },
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-foreground">
-          Olá, {profile?.full_name || "Administrador"} 👋
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Rua Orlando Pavan, 422 – Jardim Rosolém, Hortolândia/SP · {format(today, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-        </p>
+    <div className="space-y-8 animate-fade-in pb-8">
+      {/* Premium Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[hsl(220,60%,22%)] via-[hsl(220,55%,28%)] to-[hsl(220,50%,35%)] p-6 md:p-8 text-white shadow-xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+              Olá, {profile?.full_name || "Administrador"} 👋
+            </h1>
+            <div className="mt-2 flex items-center gap-2 text-white/80 text-sm">
+              <MapPin className="h-4 w-4" />
+              <span>Rua Orlando Pavan, 422 – Jd. Rosolém, Hortolândia/SP</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20 shadow-inner">
+             <div className="text-right">
+                <p className="text-xs text-white/60 uppercase tracking-wider font-semibold mb-0.5">Visão Geral de Hoje</p>
+                <p className="text-sm font-medium">{format(today, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+             </div>
+             <div className="h-12 w-12 flex items-center justify-center rounded-full bg-white/20">
+               <CalendarDays className="h-6 w-6 text-white" />
+             </div>
+          </div>
+        </div>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
         {stats.map((stat, i) => (
-          <Card key={stat.label} className="glass-card animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+          <Card 
+            key={stat.label} 
+            className="group relative overflow-hidden glass-card hover:shadow-lg transition-all duration-300 animate-slide-up hover:-translate-y-1 border-muted"
+            style={{ animationDelay: `${i * 50}ms` }}
+          >
+            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 ${stat.bg}`} />
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold text-foreground mt-2 tracking-tight">{stat.value}</p>
+                </div>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg} ${stat.color} shadow-sm group-hover:scale-110 transition-transform`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
               </div>
-              <div className="mt-3">
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">{stat.sub}</p>
+              <div className="mt-4 flex items-center text-[11px] font-medium text-muted-foreground/80">
+                <span className="truncate">{stat.sub}</span>
               </div>
             </CardContent>
           </Card>

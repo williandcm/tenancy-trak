@@ -116,13 +116,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
-          <Building2 className="h-5 w-5 text-secondary-foreground" />
+      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border/50 px-4 bg-sidebar/50 backdrop-blur-sm">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-inner">
+          <Building2 className="h-5 w-5 text-primary-foreground" />
         </div>
         <div className="animate-fade-in">
-          <h1 className="text-lg font-bold leading-none">LocaGest</h1>
-          <p className="text-xs opacity-70">Gestão de Locações</p>
+          <h1 className="text-lg font-bold leading-none tracking-tight">LocaGest</h1>
+          <p className="text-[11px] font-medium opacity-70 mt-0.5" style={{ display: collapsed ? 'none' : 'block' }}>Gestão de Locações</p>
         </div>
       </div>
 
@@ -136,14 +136,20 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               to={item.to}
               onClick={() => isMobile && setMobileMenuOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span>{item.label}</span>
+              {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-md" />
+              )}
+              <item.icon className={cn(
+                "h-5 w-5 flex-shrink-0 transition-transform duration-200",
+                active ? "text-primary scale-110" : "group-hover:scale-110"
+              )} />
+              <span className={cn("transition-opacity duration-200", collapsed && !isMobile ? "opacity-0 hidden" : "opacity-100")}>{item.label}</span>
             </Link>
           );
         })}
@@ -267,19 +273,19 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
-          "gradient-primary text-primary-foreground",
+          "bg-card border-r border-border shadow-sm text-card-foreground",
           collapsed ? "w-16" : "w-64"
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
-            <Building2 className="h-5 w-5 text-secondary-foreground" />
+        <div className="flex h-16 items-center gap-3 border-b border-border/50 px-4 bg-background/50 backdrop-blur-sm">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 shadow-inner">
+            <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <div className="animate-fade-in">
-              <h1 className="text-lg font-bold leading-none">LocaGest</h1>
-              <p className="text-xs opacity-70">Gestão de Locações</p>
+            <div className="animate-fade-in flex flex-col justify-center">
+              <h1 className="text-[17px] font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent leading-none mt-1">LocaGest</h1>
+              <p className="text-[10px] font-medium opacity-70 tracking-wide mt-0.5">GESTÃO DE LOCAÇÕES</p>
             </div>
           )}
         </div>
@@ -295,14 +301,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     <Link
                       to={item.to}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative",
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+                          ? "bg-primary/10 text-primary shadow-sm"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                         collapsed && "justify-center"
                       )}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {active && !collapsed && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-md" />
+                      )}
+                      <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0 transition-transform duration-200", active ? "scale-110" : "group-hover:scale-110")} />
                       {!collapsed && <span>{item.label}</span>}
                     </Link>
                   </TooltipTrigger>
@@ -316,24 +325,24 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {/* Footer - User Info + Logout */}
-        <div className="border-t border-sidebar-border p-3 space-y-2">
+        <div className="border-t border-border/50 p-3 space-y-2 bg-background/30 backdrop-blur-sm">
           {/* User info */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors cursor-pointer hover:bg-muted/50",
                   collapsed ? "justify-center" : ""
                 )}>
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground text-xs font-bold">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-xs font-bold border border-primary/20 shadow-sm">
                     {initials}
                   </div>
                   {!collapsed && profile && (
-                    <div className="min-w-0 animate-fade-in">
-                      <p className="text-sm font-medium leading-tight truncate text-sidebar-foreground">
+                    <div className="min-w-0 animate-fade-in text-left">
+                      <p className="text-sm font-semibold leading-tight truncate text-foreground">
                         {profile.full_name}
                       </p>
-                      <p className="text-[10px] opacity-70 truncate">
+                      <p className="text-[10px] font-medium opacity-70 truncate px-1.5 py-0.5 bg-muted rounded-md mt-1 inline-block">
                         {roleLabels[profile.role] || profile.role}
                       </p>
                     </div>
@@ -352,9 +361,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           {/* Logout */}
           <button
             onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors group",
+              collapsed ? "justify-center" : ""
+            )}
           >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
+            <LogOut className="h-[18px] w-[18px] flex-shrink-0 group-hover:scale-110 transition-transform" />
             {!collapsed && <span>Sair</span>}
           </button>
         </div>
@@ -362,7 +374,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-card border border-border shadow-sm text-foreground hover:bg-muted transition-colors"
+          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-50"
         >
           {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </button>
@@ -371,11 +383,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main content */}
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
+          "flex-1 transition-all duration-300 bg-muted/20 min-h-screen",
           collapsed ? "ml-16" : "ml-64"
         )}
       >
-        <div className="p-4 md:p-6 lg:p-8">{children}</div>
+        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
       </main>
 
       {/* Mandatory Password Change Modal */}
